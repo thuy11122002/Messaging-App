@@ -80,7 +80,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    profile.user_name,
+                                    profile.user_name.isEmpty
+                                        ? "New User"
+                                        : profile.user_name,
                                     style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,

@@ -7,22 +7,20 @@ class AuthService {
   final supabase = Supabase.instance.client;
   final ProfileService _profileService = ProfileService();
 
-  Future<String?> signUp(String email, String password) async {
+  Future<String?> signUp(String email, String password, String userName) async {
     try {
       final response = await supabase.auth.signUp(
         password: password,
         email: email,
       );
-      _profileService.createUserProfile();
-      return "Dang ki that bai";
+      _profileService.createUserProfile(userName);
+      return "Success";
     } on AuthException catch (e) {
       return e.message;
     } catch (e) {
       return "Error: $e";
     }
   }
-
-  // Dang nhap
 
   Future<String?> signIn(String email, String password) async {
     try {
@@ -35,15 +33,13 @@ class AuthService {
         return null;
       }
 
-      return "Email hoac mat khau khong hop le";
+      return "Email or pass is invalid, please try again";
     } on AuthException catch (e) {
       return e.message;
     } catch (e) {
       return "Error: $e";
     }
   }
-
-  // Dang xuat
 
   Future<void> logout(BuildContext context) async {
     try {

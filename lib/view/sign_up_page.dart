@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:messager_app/main.dart';
 import 'package:messager_app/service/auth_service.dart';
 import 'package:messager_app/view/home_page.dart';
 import 'package:messager_app/view/login_page.dart';
@@ -20,34 +21,41 @@ class _SignUpPageState extends State<SignUpPage> {
 
   final _passwordController = TextEditingController();
 
+  final _usernameController = TextEditingController();
+
   bool isLoadin = false;
 
   void _signUp() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
+    String username = _usernameController.text.trim();
 
     if (!email.contains(".com")) {
-      showSnackBar(context, "Tai khoan email ko hop le");
+      showSnackBar(context, "Email is invalid, it must contain .com");
+    }
+    if (username.isEmpty || username.length < 8) {
+      showSnackBar(
+          context, "Username is invalid, it must be more than 8 characters");
     }
 
     setState(() {
       isLoadin = true;
     });
 
-    final result = await _authService.signUp(email, password);
+    final result = await _authService.signUp(email, password, username);
 
-    if (result == null) {
+    if (result == "Success") {
       setState(() {
         isLoadin = false;
       });
-      showSnackBar(context, "Dang ky thanh cong, dang chuyen man hinh");
+      showSnackBar(context, "Sign up success, Loading...");
       Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
+          .pushReplacement(MaterialPageRoute(builder: (_) => MyHomePage()));
     } else {
       setState(() {
         isLoadin = false;
       });
-      showSnackBar(context, "Dang ky that bai: $result");
+      showSnackBar(context, "Sign up fail: $result");
     }
   }
 
@@ -69,6 +77,15 @@ class _SignUpPageState extends State<SignUpPage> {
                       color: Color.fromRGBO(109, 76, 146, 1),
                       fontWeight: FontWeight.bold)),
               SizedBox(height: 40),
+              TextFormField(
+                controller: _usernameController,
+                style: TextStyle(color: Colors.black),
+                decoration: InputDecoration(
+                  labelText: "Username",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 20),
               TextFormField(
                 controller: _emailController,
                 style: TextStyle(color: Colors.black),

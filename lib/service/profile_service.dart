@@ -7,21 +7,23 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class ProfileService {
   final supabase = Supabase.instance.client;
 
-  Future<void> createUserProfile() async {
-    final String user_id = supabase.auth.currentUser!.id;
+  Future<void> createUserProfile(String userName) async {
+    final String userId = supabase.auth.currentUser!.id;
 
     try {
-      await supabase.from("profile").insert({"id": user_id});
+      await supabase
+          .from("profile")
+          .insert({"id": userId, "user_name": userName});
     } catch (e) {
       print("Error while create profile $e");
     }
   }
 
-  Future<Profile?> fetchProfile(String user_id) async {
+  Future<Profile?> fetchProfile(String userId) async {
     // final String user_id = supabase.auth.currentUser!.id;
     try {
       final reponse =
-          await supabase.from("profile").select().eq("id", user_id).single();
+          await supabase.from("profile").select().eq("id", userId).single();
 
       return Profile.fromJson(reponse);
     } catch (e) {

@@ -15,17 +15,19 @@ class Bottomnavbar extends StatelessWidget {
                       (Set<MaterialState> states) =>
                           states.contains(MaterialState.selected)
                               ? const TextStyle(
-                                  color: Colors.white,
+                                  color: Colors.blue,
                                   fontWeight: FontWeight.bold)
                               : const TextStyle(
-                                  color: Colors.white,
+                                  color: Colors.black,
                                   fontWeight: FontWeight.bold))),
               child: NavigationBar(
                 destinations: [
                   NavigationDestination(
-                      icon: Icon(Icons.chat_bubble), label: "Home"),
+                      icon: Icon(Icons.chat_bubble), label: "Chat"),
                   NavigationDestination(
-                      icon: Icon(Icons.people), label: "Friends"),
+                      icon: Icon(Icons.people), label: "People"),
+                  NavigationDestination(
+                      icon: Icon(Icons.notifications), label: "Notification"),
                   NavigationDestination(
                       icon: Icon(Icons.settings), label: "Settings"),
                 ],

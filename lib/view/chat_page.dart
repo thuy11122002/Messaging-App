@@ -5,25 +5,26 @@ import 'package:messager_app/model/profie_model.dart';
 import 'package:messager_app/service/chat_service.dart';
 import 'package:messager_app/service/profile_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 class ChatPage extends StatefulWidget {
-  final String partner_id;
+  final String partnerId, conversationId;
 
-  ChatPage({required this.partner_id});
+  ChatPage({required this.partnerId, required this.conversationId});
 
   @override
   State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
-  final my_id = Supabase.instance.client.auth.currentUser?.id;
+  final myId = Supabase.instance.client.auth.currentUser?.id;
   final ChatService _chatService = ChatService();
   final ProfileService _profileService = ProfileService();
 
   late final Stream<List<Message>> _messagesStream;
 
   late Future<Profile?> futureProfile =
-      _profileService.fetchProfile(widget.partner_id);
+      _profileService.fetchProfile(widget.partnerId);
 
   final messages_controller = TextEditingController();
 
@@ -35,10 +36,18 @@ class _ChatPageState extends State<ChatPage> {
 
   void initializeData() async {
     try {
-      _messagesStream = _chatService.getMessages(widget.partner_id);
+      _messagesStream = _chatService.getMessages(widget.partnerId);
+      _chatService.resetUnreadCount(widget.conversationId);
     } catch (e) {
       print("Initialization Error: $e");
     }
+  }
+
+  String formatRealTime(String time) {
+    DateTime dateTime = DateTime.parse(time).toLocal();
+
+    timeago.setLocaleMessages('vi', timeago.ViMessages());
+    return timeago.format(dateTime, locale: 'vi');
   }
 
   Widget _buildListMessage() {
@@ -59,8 +68,7 @@ class _ChatPageState extends State<ChatPage> {
             itemCount: messages.length,
             itemBuilder: (context, index) {
               final msg = messages[index];
-              final isMe =
-                  msg.sender_id == my_id; // Kiểm tra có phải mình gửi không
+              final isMe = msg.sender_id == myId;
 
               return Align(
                 alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -166,10 +174,11 @@ class _ChatPageState extends State<ChatPage> {
                         return;
                       } else {
                         _chatService.sendMessage(
-                            messages_controller.text, widget.partner_id);
+                            messages_controller.text, widget.partnerId);
+                        _chatService.increUnreadCount(
+                            widget.conversationId, widget.partnerId);
                         setState(() {
                           messages_controller.clear();
-                          // this.messages = messages;
                         });
                       }
                     },

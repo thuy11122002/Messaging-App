@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:messager_app/main.dart';
 import 'package:messager_app/service/auth_service.dart';
 import 'package:messager_app/view/home_page.dart';
 import 'package:messager_app/view/sign_up_page.dart';
@@ -55,14 +56,14 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         isLoadin = false;
       });
-      showSnackBar(context, "Dang nhap thanh cong, dang chuyen man hinh");
+      showSnackBar(context, "Login successfully");
       Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
+          .pushReplacement(MaterialPageRoute(builder: (_) => MyHomePage()));
     } else {
       setState(() {
         isLoadin = false;
       });
-      showSnackBar(context, "Dang nhap that bai: $result");
+      showSnackBar(context, "Login fail: $result");
     }
   }
 
@@ -103,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: InputDecoration(
                     labelText: "Password", border: OutlineInputBorder()),
                 validator: (value) => value == null || value.length < 6
-                    ? "Password too short"
+                    ? "Password too short, need more than 8 characters"
                     : null,
               ),
               Row(
