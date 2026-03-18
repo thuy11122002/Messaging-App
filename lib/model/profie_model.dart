@@ -1,15 +1,13 @@
 class Profile {
-  String user_name, user_image, user_id;
+  String userName, userImage, userId;
 
   Profile(
-      {required this.user_name,
-      required this.user_image,
-      required this.user_id});
+      {required this.userName, required this.userImage, required this.userId});
 
   factory Profile.fromJson(Map<String, dynamic> json) {
     return Profile(
-        user_name: json['user_name'],
-        user_image: json['user_image'],
-        user_id: json['id']);
+        userName: json['user_name'],
+        userImage: json['user_image'],
+        userId: json['id']);
   }
 }

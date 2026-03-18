@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:messager_app/service/profile_service.dart';
 import 'package:messager_app/view/login_page.dart';
+import 'package:messager_app/view/widgets/snackBar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -49,6 +50,33 @@ class AuthService {
           .pushReplacement(MaterialPageRoute(builder: (_) => LoginPage()));
     } catch (e) {
       print("Logout error $e");
+    }
+  }
+
+  Future<String> changePassword(String oldPassword, String newPassword) async {
+    try {
+      final email = supabase.auth.currentUser!.email;
+
+      final response = await supabase.auth.signInWithPassword(
+        password: oldPassword,
+        email: email,
+      );
+
+      if (response.user != null) {
+        final UserResponse res = await supabase.auth.updateUser(
+          UserAttributes(
+            password: newPassword,
+          ),
+        );
+        return "Successful";
+      } else {
+        print("Old Password is wrong");
+
+        return "Old Password is wrong";
+      }
+    } catch (e) {
+      print("Error while changing Password: $e");
+      return "Error";
     }
   }
 }

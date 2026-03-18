@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:messager_app/main.dart';
 import 'package:messager_app/service/auth_service.dart';
-import 'package:messager_app/view/home_page.dart';
+import 'package:messager_app/view/chat.dart';
 import 'package:messager_app/view/sign_up_page.dart';
 import 'package:messager_app/view/widgets/snackBar.dart';
 
@@ -63,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         isLoadin = false;
       });
-      showSnackBar(context, "Login fail: $result");
+      showSnackBar(context, "Login fail: email or password isn't correct");
     }
   }
 
@@ -84,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 32,
-                      color: Color.fromRGBO(109, 76, 146, 1),
+                      color: Colors.blue,
                       fontWeight: FontWeight.bold)),
               SizedBox(height: 40),
               TextFormField(

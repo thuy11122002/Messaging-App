@@ -5,13 +5,13 @@ import 'package:messager_app/model/profie_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileService {
-  final supabase = Supabase.instance.client;
+  final _supabase = Supabase.instance.client;
 
   Future<void> createUserProfile(String userName) async {
-    final String userId = supabase.auth.currentUser!.id;
+    final String userId = _supabase.auth.currentUser!.id;
 
     try {
-      await supabase
+      await _supabase
           .from("profile")
           .insert({"id": userId, "user_name": userName});
     } catch (e) {
@@ -23,7 +23,7 @@ class ProfileService {
     // final String user_id = supabase.auth.currentUser!.id;
     try {
       final reponse =
-          await supabase.from("profile").select().eq("id", userId).single();
+          await _supabase.from("profile").select().eq("id", userId).single();
 
       return Profile.fromJson(reponse);
     } catch (e) {
@@ -35,7 +35,7 @@ class ProfileService {
   Future<List<Profile>> fetchAllProfile() async {
     // final String user_id = supabase.auth.currentUser!.id;
     try {
-      final reponse = await supabase.from("profile").select();
+      final reponse = await _supabase.from("profile").select();
 
       return (reponse as List).map((json) => Profile.fromJson(json)).toList();
     } catch (e) {
@@ -44,42 +44,70 @@ class ProfileService {
     }
   }
 
-  // Future<Profile?> fetchProfile() async {
-  //   final String user_id = supabase.auth.currentUser!.id;
-  //   try {
-  //     final reponse =
-  //         await supabase.from("profile").select().eq("id", user_id).single();
-
-  //     return Profile.fromJson(reponse);
-  //   } catch (e) {
-  //     print("Error while fetching profile $e");
-  //     return null;
-  //   }
-  // }
-
   Future<void> updateProfile(
-      File? file, String user_name, BuildContext context) async {
-    final String user_id = supabase.auth.currentUser!.id;
+      File? file, String userName, BuildContext context) async {
+    final String userId = _supabase.auth.currentUser!.id;
 
     try {
-      final file_name = 'avatar_${user_id}.jpg';
-      final file_path = 'avatar/$file_name';
+      if (file == null) {
+        await _supabase
+            .from("profile")
+            .update({"user_name": userName}).eq('id', userId);
+      } else {
+        final fileName = 'avatar_${userId}.jpg';
+        final filePath = 'avatar/$fileName';
 
-      print(file!.path);
+        await _supabase.storage.from("profile").upload(filePath, file!,
+            fileOptions: FileOptions(upsert: true, cacheControl: '3600'));
+        final imageUrl =
+            _supabase.storage.from("profile").getPublicUrl(filePath);
 
-      await supabase.storage.from("profile").upload(file_path, file,
-          fileOptions: FileOptions(upsert: true, cacheControl: '3600'));
-      final image_url =
-          supabase.storage.from("profile").getPublicUrl(file_path);
-
-      await supabase.from("profile").update(
-          {'user_image': image_url, "user_name": user_name}).eq('id', user_id);
+        await _supabase.from("profile").update(
+            {'user_image': imageUrl, "user_name": userName}).eq('id', userId);
+      }
 
       // showSnackBar(context, "Saved");
     } on StorageException catch (e) {
       print("Error Storage: $e");
     } catch (e) {
       print("Error while Update $e");
+    }
+  }
+
+  Future<void> updateUsername(String userName) async {
+    final String userId = _supabase.auth.currentUser!.id;
+
+    try {
+      await _supabase
+          .from("profile")
+          .update({"user_name": userName}).eq('id', userId);
+
+      // showSnackBar(context, "Saved");
+    } on StorageException catch (e) {
+      print("Error Storage: $e");
+    } catch (e) {
+      print("Error while Update $e");
+    }
+  }
+
+  Future<List<Profile>> findPeople(String query) async {
+    // final myId = _supabase.auth.currentUser!.id;
+
+    try {
+      if (query.isEmpty) {
+        final reponse = await _supabase.from('profile').select();
+        return (reponse as List).map((json) => Profile.fromJson(json)).toList();
+      } else {
+        final reponse = await _supabase
+            .from("profile")
+            .select()
+            .ilike("user_name", '%$query%');
+        print(reponse);
+        return (reponse as List).map((json) => Profile.fromJson(json)).toList();
+      }
+    } catch (e) {
+      print("Error while Searching People: $e");
+      return [];
     }
   }
 }

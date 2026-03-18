@@ -1,5 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:messager_app/model/message_model.dart';
 import 'package:messager_app/model/profie_model.dart';
 import 'package:messager_app/service/chat_service.dart';
@@ -17,6 +19,8 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  final supabase = Supabase.instance.client;
+
   final myId = Supabase.instance.client.auth.currentUser?.id;
   final ChatService _chatService = ChatService();
   final ProfileService _profileService = ProfileService();
@@ -26,7 +30,46 @@ class _ChatPageState extends State<ChatPage> {
   late Future<Profile?> futureProfile =
       _profileService.fetchProfile(widget.partnerId);
 
-  final messages_controller = TextEditingController();
+  final TextEditingController messagesController = TextEditingController();
+
+  bool change = false;
+
+  File? imageFile;
+  XFile? image;
+
+  Future<void> pickImage() async {
+    final String myId = supabase.auth.currentUser!.id;
+
+    final ImagePicker picker = ImagePicker();
+
+    image =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+
+    if (image == null) return;
+    setState(() {
+      imageFile = File(image!.path);
+      change = true;
+    });
+
+    if (!mounted) {
+      return;
+    }
+  }
+
+  Future<void> upload(XFile? image) async {
+    try {
+      _chatService.sendImage(imageFile, widget.partnerId);
+    } catch (e) {
+      print("Error while update Image $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          imageFile = File(image!.path);
+          change = true;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -68,22 +111,27 @@ class _ChatPageState extends State<ChatPage> {
             itemCount: messages.length,
             itemBuilder: (context, index) {
               final msg = messages[index];
-              final isMe = msg.sender_id == myId;
+              final isMe = msg.senderId == myId;
 
               return Align(
                 alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
-                  margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isMe ? Colors.blue : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Text(
-                    msg.text,
-                    style: TextStyle(color: isMe ? Colors.white : Colors.black),
-                  ),
-                ),
+                    margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isMe ? Colors.blue : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: msg.image.isEmpty
+                        ? Text(
+                            msg.text,
+                            style: TextStyle(
+                                color: isMe ? Colors.white : Colors.black),
+                          )
+                        : Container(
+                            width: 120,
+                            child:
+                                Image.network(msg.image, fit: BoxFit.cover))),
               );
             },
           );
@@ -100,7 +148,7 @@ class _ChatPageState extends State<ChatPage> {
           if (snapshot.hasError || !snapshot.hasData) {
             return SizedBox.shrink();
           }
-
+          Profile? profile = snapshot.data!;
           return Row(
             children: [
               GestureDetector(
@@ -116,16 +164,14 @@ class _ChatPageState extends State<ChatPage> {
                   height: 54,
                   child: ClipRRect(
                       borderRadius: BorderRadius.circular(80),
-                      child: snapshot.data!.user_image.isEmpty
+                      child: profile.userImage.isEmpty
                           ? Image.asset("assets/images/avatar.png")
-                          : Image.network(snapshot.data!.user_image))),
+                          : Image.network(profile.userImage))),
               SizedBox(
                 width: 12,
               ),
               Text(
-                snapshot.data!.user_name.isEmpty
-                    ? "New User"
-                    : snapshot.data!.user_name,
+                profile.userName.isEmpty ? "New User" : profile.userName,
                 style: TextStyle(
                     color: Colors.black,
                     fontSize: 16,
@@ -148,19 +194,59 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             _buidlProfilePartner(),
             Expanded(child: _buildListMessage()),
+            imageFile != null
+                ? Align(
+                    alignment: Alignment.topLeft,
+                    child: Row(
+                      children: [
+                        Container(
+                            width: 120,
+                            height: 120,
+                            margin: EdgeInsets.only(top: 12),
+                            child: Image.file(
+                              imageFile!,
+                              fit: BoxFit.cover,
+                            )),
+                        SizedBox(
+                          width: 8,
+                        ),
+                        GestureDetector(
+                            onTap: () {
+                              imageFile = null;
+                              setState(() {});
+                            },
+                            child: Icon(Icons.cancel))
+                      ],
+                    ),
+                  )
+                : SizedBox.shrink(),
             SizedBox(
               height: 12,
             ),
             Row(
               children: [
-                Icon(Icons.add),
+                GestureDetector(
+                    onTap: () {
+                      pickImage();
+                    },
+                    child: imageFile != null
+                        ? Container(
+                            decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                                color: Colors.blue),
+                            child: Icon(
+                              Icons.add,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(Icons.add)),
                 SizedBox(
                   width: 12,
                 ),
                 Container(
                   width: MediaQuery.sizeOf(context).width * 0.75,
                   child: TextField(
-                    controller: messages_controller,
+                    controller: messagesController,
                     decoration: InputDecoration(border: OutlineInputBorder()),
                   ),
                 ),
@@ -169,17 +255,24 @@ class _ChatPageState extends State<ChatPage> {
                 ),
                 GestureDetector(
                     onTap: () {
-                      if (messages_controller.text == "" ||
-                          messages_controller.text.isEmpty) {
-                        return;
+                      if (image != null) {
+                        upload(image);
+                        imageFile = null;
+
+                        setState(() {});
                       } else {
-                        _chatService.sendMessage(
-                            messages_controller.text, widget.partnerId);
-                        _chatService.increUnreadCount(
-                            widget.conversationId, widget.partnerId);
-                        setState(() {
-                          messages_controller.clear();
-                        });
+                        if (messagesController.text == "" ||
+                            messagesController.text.isEmpty) {
+                          return;
+                        } else {
+                          _chatService.sendMessage(
+                              messagesController.text, widget.partnerId);
+                          _chatService.increUnreadCount(
+                              widget.conversationId, widget.partnerId);
+                          setState(() {
+                            messagesController.clear();
+                          });
+                        }
                       }
                     },
                     child: Icon(Icons.send))

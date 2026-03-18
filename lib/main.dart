@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:messager_app/view/home_page.dart';
+import 'package:messager_app/view/chat.dart';
 import 'package:messager_app/view/login_page.dart';
 import 'package:messager_app/view/widget_tree.dart';
 import 'package:provider/provider.dart';
@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
       title: 'Message App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
       home: AuthCheck(),

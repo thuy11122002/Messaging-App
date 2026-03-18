@@ -1,28 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:messager_app/model/profie_model.dart';
-import 'package:messager_app/service/notification_service.dart';
+import 'package:messager_app/service/chat_service.dart';
 import 'package:messager_app/service/profile_service.dart';
-import 'package:messager_app/view/widgets/snackBar.dart';
+import 'package:messager_app/view/chat_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
-class FindPeoplePage extends StatefulWidget {
-  const FindPeoplePage({super.key});
+class SearchChat extends StatefulWidget {
+  const SearchChat({super.key});
 
   @override
-  State<FindPeoplePage> createState() => _FindPeoplePageState();
+  State<SearchChat> createState() => _SearchChatState();
 }
 
-class _FindPeoplePageState extends State<FindPeoplePage> {
+class _SearchChatState extends State<SearchChat> {
   final myId = Supabase.instance.client.auth.currentUser!.id;
+  final ChatService _chatService = ChatService();
   final ProfileService _profileService = ProfileService();
-  final NotificationService _notificationService = NotificationService();
 
-  late Future<List<Profile>> futureProfile =
-      _profileService.findPeople(searchValue);
+  late Future<List<Profile>> futureProfile = _profileService.fetchAllProfile();
 
   List<Profile> profiles = [];
-
-  String searchValue = "";
+  List<Map<String, dynamic>> conversations = [];
 
   @override
   void initState() {
@@ -32,10 +31,14 @@ class _FindPeoplePageState extends State<FindPeoplePage> {
 
   void initializeData() async {
     try {
+      // _conversationsStream = _chatService.getConversations();
+
       final profiles = await futureProfile;
+      final conversations = await futureConversations;
       if (profiles.isNotEmpty) {
         setState(() {
           this.profiles = profiles;
+          this.conversations = conversations;
         });
       }
     } catch (e) {
@@ -43,9 +46,22 @@ class _FindPeoplePageState extends State<FindPeoplePage> {
     }
   }
 
-  Widget _buildPeopleList() {
+  final TextEditingController searchController = TextEditingController();
+  String searchValue = "";
+
+  late Future<List<Map<String, dynamic>>> futureConversations =
+      _chatService.findConversations(searchValue);
+
+  String formatRealTime(String time) {
+    DateTime dateTime = DateTime.parse(time).toLocal();
+
+    timeago.setLocaleMessages('vi', timeago.ViMessages());
+    return timeago.format(dateTime, locale: 'vi');
+  }
+
+  Widget _buildFindPeopleList() {
     return FutureBuilder(
-        future: futureProfile,
+        future: futureConversations,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -55,35 +71,36 @@ class _FindPeoplePageState extends State<FindPeoplePage> {
               snapshot.data!.isEmpty) {
             return SizedBox.shrink();
           }
-          final profiles = snapshot.data ?? [];
+          final conversations = snapshot.data ?? [];
           return ListView.builder(
-              itemCount: profiles.length,
-              scrollDirection: Axis.vertical,
-              itemBuilder: (context, index) {
-                print(profiles.length);
-                Profile profile = snapshot.data![index];
-                // Future<bool> check =
-                //     _chatService.checkConversation(profile.user_id);
-                Future<bool> checkNotification =
-                    _notificationService.checkNotification(profile.userId);
-
-                if (profile.userId == myId) {
-                  return SizedBox.shrink();
-                }
-
-                return FutureBuilder(
-                    future: checkNotification,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError || !snapshot.hasData) {
-                        return SizedBox.shrink();
-                      }
-                      if (!snapshot.data!) {
-                        return SizedBox.shrink();
-                      }
-                      return Container(
+            itemCount: conversations.length,
+            scrollDirection: Axis.vertical,
+            itemBuilder: (context, index) {
+              final conv = conversations[index];
+              final List<dynamic> participants = conv['participant_ids'];
+              final partnerId = participants.firstWhere((id) => id != myId);
+              Future<Profile?> p = _profileService.fetchProfile(partnerId);
+              return FutureBuilder(
+                  future: p,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError || !snapshot.hasData) {
+                      return SizedBox.shrink();
+                    }
+                    final profile = snapshot.data!;
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => ChatPage(
+                                      partnerId: profile.userId,
+                                      conversationId: conv['id'],
+                                    )));
+                      },
+                      child: Container(
                         width: MediaQuery.sizeOf(context).width,
                         margin: EdgeInsets.only(bottom: 12),
                         child: Row(
@@ -97,6 +114,7 @@ class _FindPeoplePageState extends State<FindPeoplePage> {
                                         ? Image.asset(
                                             "assets/images/avatar.png")
                                         : Image.network(profile.userImage))),
+                            // SizedBox()),
                             SizedBox(
                               width: 12,
                             ),
@@ -115,25 +133,17 @@ class _FindPeoplePageState extends State<FindPeoplePage> {
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold),
                                     ),
-                                    Text("Founder and CEO at HighWin")
                                   ],
                                 ),
                               ),
                             ),
-                            GestureDetector(
-                                onTap: () {
-                                  _notificationService
-                                      .createNotification(profile.userId);
-                                  showSnackBar(
-                                      context, "Has already sent request");
-                                  setState(() {});
-                                },
-                                child: Icon(Icons.add))
                           ],
                         ),
-                      );
-                    });
-              });
+                      ),
+                    );
+                  });
+            },
+          );
         });
   }
 
@@ -155,12 +165,24 @@ class _FindPeoplePageState extends State<FindPeoplePage> {
               SizedBox(
                 height: 12,
               ),
-              Text(
-                "Find People",
-                style: TextStyle(
-                    fontSize: 24,
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                      child: Icon(Icons.arrow_back_ios_new)),
+                  SizedBox(
+                    width: 12,
+                  ),
+                  Text(
+                    "Search",
+                    style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
               SizedBox(
                 height: 12,
@@ -170,15 +192,18 @@ class _FindPeoplePageState extends State<FindPeoplePage> {
                   Container(
                     width: MediaQuery.sizeOf(context).width * 0.8,
                     child: TextField(
-                      onChanged: (value) {
-                        setState(() {
-                          searchValue = value;
-                          futureProfile =
-                              _profileService.findPeople(searchValue);
-                        });
-                      },
+                      controller: searchController,
                       decoration: InputDecoration(
                           border: OutlineInputBorder(), hintText: "Search"),
+                      onChanged: (value) {
+                        searchController.text;
+                        // _onSearchChanged(value);
+                        setState(() {
+                          searchValue = value;
+                          futureConversations =
+                              _chatService.findConversations(searchValue);
+                        });
+                      },
                     ),
                   ),
                   Expanded(child: SizedBox()),
@@ -188,7 +213,7 @@ class _FindPeoplePageState extends State<FindPeoplePage> {
               SizedBox(
                 height: 12,
               ),
-              Expanded(child: _buildPeopleList())
+              Expanded(child: _buildFindPeopleList())
             ],
           ),
         ),

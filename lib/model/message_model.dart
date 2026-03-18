@@ -1,13 +1,16 @@
 class Message {
-  String sender_id, receiver_id, text;
+  String senderId, receiverId, text, image;
   Message(
-      {required this.sender_id, required this.receiver_id, required this.text});
+      {required this.senderId,
+      required this.receiverId,
+      required this.text,
+      required this.image});
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
-      sender_id: json['sender_id'],
-      receiver_id: json['receiver_id'],
-      text: json['text'],
-    );
+        senderId: json['sender_id'],
+        receiverId: json['receiver_id'],
+        text: json['text'],
+        image: json['image']);
   }
 }

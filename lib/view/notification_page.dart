@@ -4,6 +4,7 @@ import 'package:messager_app/model/profie_model.dart';
 import 'package:messager_app/service/chat_service.dart';
 import 'package:messager_app/service/notification_service.dart';
 import 'package:messager_app/service/profile_service.dart';
+import 'package:messager_app/view/widgets/snackBar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NotificationPage extends StatefulWidget {
@@ -56,7 +57,7 @@ class _NotificationPageState extends State<NotificationPage> {
           if (snapshot.hasError ||
               !snapshot.hasData ||
               snapshot.data!.isEmpty) {
-            return SizedBox.shrink();
+            return Center(child: Text("You have no friend request"));
           }
           return ListView.builder(
               itemCount: notifications.length,
@@ -90,10 +91,10 @@ class _NotificationPageState extends State<NotificationPage> {
                                 height: 54,
                                 child: ClipRRect(
                                     borderRadius: BorderRadius.circular(80),
-                                    child: profile.user_image.isEmpty
+                                    child: profile.userImage.isEmpty
                                         ? Image.asset(
                                             "assets/images/avatar.png")
-                                        : Image.network(profile.user_image))),
+                                        : Image.network(profile.userImage))),
                             SizedBox(
                               width: 12,
                             ),
@@ -104,9 +105,9 @@ class _NotificationPageState extends State<NotificationPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      profile.user_name.isEmpty
+                                      profile.userName.isEmpty
                                           ? "New User"
-                                          : profile.user_name,
+                                          : profile.userName,
                                       style: TextStyle(
                                           color: Colors.black,
                                           fontSize: 16,
@@ -120,7 +121,9 @@ class _NotificationPageState extends State<NotificationPage> {
                             GestureDetector(
                               onTap: () {
                                 _notificationService
-                                    .acceptNotify(profile.user_id);
+                                    .acceptNotify(profile.userId);
+                                showSnackBar(context, "Accepted Request");
+                                setState(() {});
                               },
                               child: Container(
                                   width: 40,
@@ -139,7 +142,9 @@ class _NotificationPageState extends State<NotificationPage> {
                             GestureDetector(
                                 onTap: () {
                                   _notificationService
-                                      .unacceptNotify(profile.user_id);
+                                      .unacceptNotify(profile.userId);
+                                  showSnackBar(context, "Unaccepted Request");
+                                  setState(() {});
                                 },
                                 child: Container(
                                     width: 40,

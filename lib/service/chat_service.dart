@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:messager_app/model/item_chat_model.dart';
+import 'dart:io';
+
 import 'package:messager_app/model/message_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart' as uuid;
 
 class ChatService {
   final _supabase = Supabase.instance.client;
@@ -28,6 +29,54 @@ class ChatService {
         });
   }
 
+  Future<void> sendMessage(String text, String partnerId) async {
+    final myId = _supabase.auth.currentUser!.id;
+    await _supabase.from('messages').insert({
+      'sender_id': myId,
+      'receiver_id': partnerId,
+      'text': text,
+    });
+    await _supabase.from('conversations').update({
+      'last_message': text,
+      'last_sender_id': myId,
+      'last_message_time': DateTime.now().toUtc().toIso8601String()
+    }).contains('participant_ids', [myId, partnerId]);
+  }
+
+  Future<void> sendImage(File? file, String partnerId) async {
+    final myId = _supabase.auth.currentUser!.id;
+
+    try {
+      String unique = uuid.Uuid().v4();
+      final fileName = '${unique}.jpg';
+      print(fileName);
+      final filePath = fileName;
+
+      await _supabase.storage.from("chat_images").upload(filePath, file!,
+          fileOptions: FileOptions(upsert: true, cacheControl: '3600'));
+      final imageUrl =
+          _supabase.storage.from("chat_images").getPublicUrl(filePath);
+      await _supabase.from('messages').insert({
+        'sender_id': myId,
+        'receiver_id': partnerId,
+        'text': "",
+        'image': imageUrl
+      });
+
+      await _supabase.from('conversations').update({
+        'last_message': 'Sent an image',
+        'last_sender_id': myId,
+        'last_message_time': DateTime.now().toUtc().toIso8601String()
+      }).contains('participant_ids', [myId, partnerId]);
+
+      // showSnackBar(context, "Saved");
+    } on StorageException catch (e) {
+      print("Error Storage: $e");
+    } catch (e) {
+      print("Error while Update $e");
+    }
+  }
+
   Stream<List<Map<String, dynamic>>> getConversations() {
     final myId = _supabase.auth.currentUser!.id;
 
@@ -41,34 +90,6 @@ class ChatService {
             return participants.contains(myId);
           }).toList();
         });
-  }
-
-  Future<List<Map<String, dynamic>>> getChats() async {
-    final myId = _supabase.auth.currentUser!.id;
-    try {
-      return await _supabase
-          .from('conversations')
-          .select()
-          .not('participant_ids', 'cs', [myId]).order('last_message_time',
-              ascending: false);
-    } catch (e) {
-      print("Error while fetching $e");
-      return [];
-    }
-  }
-
-  Future<void> sendMessage(String text, String partnerId) async {
-    final myId = _supabase.auth.currentUser!.id;
-    await _supabase.from('messages').insert({
-      'sender_id': myId,
-      'receiver_id': partnerId,
-      'text': text,
-    });
-    await _supabase.from('conversations').update({
-      'last_message': text,
-      'last_sender_id': myId,
-      'last_message_time': DateTime.now().toUtc().toIso8601String()
-    }).contains('participant_ids', [myId, partnerId]);
   }
 
   Future<void> addChat(String partnerId) async {
@@ -99,6 +120,39 @@ class ChatService {
     } catch (e) {
       print("Error while adding $e");
       rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> findConversations(String query) async {
+    final myId = _supabase.auth.currentUser!.id;
+    List<Map<String, dynamic>> enrichedConversations = [];
+
+    try {
+      if (query.isEmpty) {
+        return await _supabase
+            .from('conversations')
+            .select()
+            .contains('participant_ids', [myId]);
+      } else {
+        final ids = await _supabase
+            .from("profile")
+            .select("id")
+            .ilike("user_name", '%$query%');
+
+        for (var id in (ids as List).map((e) => e['id']).toList()) {
+          if (id != myId) {
+            final conversation = await _supabase
+                .from("conversations")
+                .select()
+                .contains('participant_ids', [myId, id]).single();
+            enrichedConversations.add(conversation);
+          }
+        }
+      }
+      return enrichedConversations;
+    } catch (e) {
+      print("Error while Searching: $e");
+      return [];
     }
   }
 
@@ -145,9 +199,4 @@ class ChatService {
       return false;
     }
   }
-
-  // Future<List<ItemChatModel>> getChats() async{
-  //   final myId = _supabase.auth.currentUser!.id;
-  //   final reponse = await _supabase.from('chatrooms').select()
-  // }
 }

@@ -5,6 +5,7 @@ import 'package:messager_app/service/auth_service.dart';
 import 'package:messager_app/service/chat_service.dart';
 import 'package:messager_app/service/profile_service.dart';
 import 'package:messager_app/view/chat_page.dart';
+import 'package:messager_app/view/search_chat.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -21,16 +22,10 @@ class _HomePageState extends State<HomePage> {
   final ProfileService _profileService = ProfileService();
   final ChatService _chatService = ChatService();
 
-  late Future<List<Map<String, dynamic>>> futureConversation =
-      _chatService.getChats();
+  final TextEditingController searchController = TextEditingController();
+  String searchValue = "";
 
   late final Stream<List<Map<String, dynamic>>> _conversationsStream;
-
-  void logout() {
-    setState(() {
-      _authService.logout(context);
-    });
-  }
 
   @override
   void initState() {
@@ -42,6 +37,7 @@ class _HomePageState extends State<HomePage> {
     try {
       // final profiles = await futureProfile;
       _conversationsStream = _chatService.getConversations();
+      print(_conversationsStream);
     } catch (e) {
       print("Initialization Error: $e");
     }
@@ -53,6 +49,8 @@ class _HomePageState extends State<HomePage> {
     timeago.setLocaleMessages('vi', timeago.ViMessages());
     return timeago.format(dateTime, locale: 'vi');
   }
+
+  List<Map<String, dynamic>> listConversations = [];
 
   Widget _buildListConversations() {
     return StreamBuilder(
@@ -75,8 +73,8 @@ class _HomePageState extends State<HomePage> {
               final List<dynamic> participants = conv['participant_ids'];
               final partnerId = participants.firstWhere((id) => id != myId);
               Future<Profile?> p = _profileService.fetchProfile(partnerId);
+              print(conversations.length);
               Map<String, dynamic> unreadCounts = conv['unread_counts'];
-
               return FutureBuilder(
                   future: p,
                   builder: (context, snapshot) {
@@ -93,7 +91,7 @@ class _HomePageState extends State<HomePage> {
                             context,
                             MaterialPageRoute(
                                 builder: (_) => ChatPage(
-                                      partnerId: profile.user_id,
+                                      partnerId: profile.userId,
                                       conversationId: conv['id'],
                                     )));
                       },
@@ -107,10 +105,10 @@ class _HomePageState extends State<HomePage> {
                                 height: 54,
                                 child: ClipRRect(
                                     borderRadius: BorderRadius.circular(80),
-                                    child: profile.user_image.isEmpty
+                                    child: profile.userImage.isEmpty
                                         ? Image.asset(
                                             "assets/images/avatar.png")
-                                        : Image.network(profile.user_image))),
+                                        : Image.network(profile.userImage))),
                             // SizedBox()),
                             SizedBox(
                               width: 12,
@@ -122,9 +120,9 @@ class _HomePageState extends State<HomePage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      profile.user_name.isEmpty
+                                      profile.userName.isEmpty
                                           ? "New User"
-                                          : profile.user_name,
+                                          : profile.userName,
                                       style: TextStyle(
                                           color: Colors.black,
                                           fontSize: 16,
@@ -182,11 +180,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(Icons.more_horiz),
-                  GestureDetector(
-                      onTap: () => logout(), child: Icon(Icons.edit_square))
-                ],
+                children: [Icon(Icons.more_horiz), Icon(Icons.edit_square)],
               ),
               SizedBox(
                 height: 12,
@@ -206,8 +200,13 @@ class _HomePageState extends State<HomePage> {
                   Container(
                     width: MediaQuery.sizeOf(context).width * 0.8,
                     child: TextField(
+                      controller: searchController,
                       decoration: InputDecoration(
                           border: OutlineInputBorder(), hintText: "Search"),
+                      onTap: () {
+                        Navigator.push(context,
+                            MaterialPageRoute(builder: (_) => SearchChat()));
+                      },
                     ),
                   ),
                   Expanded(child: SizedBox()),

@@ -8,24 +8,26 @@ class NotificationService {
   final ChatService _chatService = ChatService();
 
   Future<void> createNotification(String partnerId) async {
-    final myId = _supabase.auth.currentUser!.id;
+    final String userId = _supabase.auth.currentUser!.id;
+
     try {
       await _supabase
           .from("notifications")
-          .insert({'sender_id': myId, 'receiver_id': partnerId});
+          .insert({'sender_id': userId, 'receiver_id': partnerId});
     } catch (e) {
       print("Error while send notify: $e");
     }
   }
 
   Future<bool> checkNotification(String partnerId) async {
-    final myId = _supabase.auth.currentUser!.id;
+    final String userId = _supabase.auth.currentUser!.id;
+
     try {
       final reponse = await _supabase
           .from("notifications")
           .select()
-          .or("sender_id.eq.$myId,sender_id.eq.$partnerId")
-          .or("receiver_id.eq.$partnerId,receiver_id.eq.$myId");
+          .or("sender_id.eq.$userId,sender_id.eq.$partnerId")
+          .or("receiver_id.eq.$partnerId,receiver_id.eq.$userId");
       if (reponse.isEmpty) {
         return true;
       } else {
@@ -38,7 +40,7 @@ class NotificationService {
   }
 
   Future<void> acceptNotify(String partnerId) async {
-    final myId = _supabase.auth.currentUser!.id;
+    final String userId = _supabase.auth.currentUser!.id;
 
     try {
       _chatService.addChat(partnerId);
@@ -46,34 +48,34 @@ class NotificationService {
           .from("notifications")
           .update({'accepted': true})
           .eq('sender_id', partnerId)
-          .eq('receiver_id', myId);
+          .eq('receiver_id', userId);
     } catch (e) {
       print('Error while acepting : $e');
     }
   }
 
   Future<void> unacceptNotify(String partnerId) async {
-    final myId = _supabase.auth.currentUser!.id;
+    final String userId = _supabase.auth.currentUser!.id;
 
     try {
       await _supabase
           .from("notifications")
           .delete()
           .eq('sender_id', partnerId)
-          .eq('receiver_id', myId);
+          .eq('receiver_id', userId);
     } catch (e) {
       print('Error while unacepting : $e');
     }
   }
 
   Future<List<NotificationModel>> getAllNotification() async {
-    final myId = _supabase.auth.currentUser!.id;
+    final String userId = _supabase.auth.currentUser!.id;
 
     try {
       final reponse = await _supabase
           .from("notifications")
           .select()
-          .eq('receiver_id', myId);
+          .eq('receiver_id', userId);
       return (reponse as List)
           .map((json) => NotificationModel.fromJson(json))
           .toList();
