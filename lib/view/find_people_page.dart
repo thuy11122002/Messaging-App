@@ -115,7 +115,7 @@ class _FindPeoplePageState extends State<FindPeoplePage> {
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold),
                                     ),
-                                    Text("Founder and CEO at HighWin")
+                                    Text("User Description.....")
                                   ],
                                 ),
                               ),
