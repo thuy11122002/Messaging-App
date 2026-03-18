@@ -84,6 +84,8 @@ class _SignUpPageState extends State<SignUpPage> {
                   labelText: "Username",
                   border: OutlineInputBorder(),
                 ),
+                validator: (value) =>
+                    value == null ? "Enter a valid username" : null,
               ),
               SizedBox(height: 20),
               TextFormField(
