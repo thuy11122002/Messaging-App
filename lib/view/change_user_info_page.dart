@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:messager_app/service/profile_service.dart';
+import 'package:messager_app/view/widgets/snackBar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChangeProfilePage extends StatefulWidget {
@@ -114,6 +115,10 @@ class _ChangeProfilePageState extends State<ChangeProfilePage> {
                 onTap: () {
                   // _profileService.updateProfileName(
                   //     userNameController.text, context);
+                  if (userNameController.text.isEmpty) {
+                    showSnackBar(context, "Username must be filled");
+                    return;
+                  }
                   if (image != null) {
                     Update(userNameController.text, image);
                     setState(() {
